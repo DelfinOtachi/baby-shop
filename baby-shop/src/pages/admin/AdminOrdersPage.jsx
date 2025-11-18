@@ -5,7 +5,7 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
 
   const fetchOrders = async () => {
-    const { data } = await axios.get("http://localhost:5000/api/orders", {
+    const { data } = await axios.get("${process.env.REACT_APP_API_URL}/api/orders", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     setOrders(data);
@@ -17,7 +17,7 @@ export default function AdminOrdersPage() {
 
   const updateStatus = async (id, newStatus) => {
     await axios.put(
-      `http://localhost:5000/api/orders/${id}`,
+      `${process.env.REACT_APP_API_URL}/api/orders/${id}`,
       { orderStatus: newStatus },
       { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
     );

@@ -15,7 +15,7 @@ export default function TopDeals() {
   useEffect(() => {
     const fetchDeals = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5000/api/products/top-deals");
+        const { data } = await axios.get("${process.env.REACT_APP_API_URL}/api/products/top-deals");
         setProducts(data);
       } catch (err) {
         console.error("Error fetching top deals:", err);

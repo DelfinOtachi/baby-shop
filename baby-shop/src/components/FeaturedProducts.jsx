@@ -16,7 +16,7 @@ export default function FeaturedProducts() {
     const fetchFeatured = async () => {
       try {
         const { data } = await axios.get(
-          "http://localhost:5000/api/products/featured"
+          "${process.env.REACT_APP_API_URL}/api/products/featured"
         );
         setProducts(data);
       } catch (err) {
