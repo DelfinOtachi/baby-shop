@@ -1,9 +1,11 @@
 // src/utils/cartUtils.js
 
-// ✅ Get cart safely
-export const getCart = () => {
+// ✅ Get cart safely (per user if logged in)
+export const getCart = (userId = null) => {
+  const key = userId ? `cart_${userId}` : "cart";
+
   try {
-    const saved = JSON.parse(localStorage.getItem("cart"));
+    const saved = JSON.parse(localStorage.getItem(key));
     if (saved && Array.isArray(saved.items)) return saved;
   } catch {
     // ignore malformed JSON
@@ -12,20 +14,19 @@ export const getCart = () => {
 };
 
 // ✅ Save cart + trigger update event for Navbar
-export const saveCart = (cart) => {
-  localStorage.setItem("cart", JSON.stringify(cart));
+export const saveCart = (cart, userId = null) => {
+  const key = userId ? `cart_${userId}` : "cart";
+  localStorage.setItem(key, JSON.stringify(cart));
   window.dispatchEvent(new Event("cartUpdated"));
 };
 
-// ✅ Add to cart (even if no cart exists yet)
-export const addToCart = (product, quantity = 1) => {
-  const cart = getCart();
+// ✅ Add to cart
+export const addToCart = (product, quantity = 1, userId = null) => {
+  const cart = getCart(userId);
 
   if (!Array.isArray(cart.items)) cart.items = [];
 
-  const existing = cart.items.find(
-    (item) => item.product._id === product._id
-  );
+  const existing = cart.items.find((item) => item.product._id === product._id);
 
   if (existing) {
     existing.quantity += quantity;
@@ -42,13 +43,13 @@ export const addToCart = (product, quantity = 1) => {
     0
   );
 
-  saveCart(cart);
+  saveCart(cart, userId);
   return cart;
 };
 
 // ✅ Remove item from cart
-export const removeFromCart = (productId) => {
-  const cart = getCart();
+export const removeFromCart = (productId, userId = null) => {
+  const cart = getCart(userId);
 
   if (!Array.isArray(cart.items)) cart.items = [];
 
@@ -58,13 +59,13 @@ export const removeFromCart = (productId) => {
     0
   );
 
-  saveCart(cart);
+  saveCart(cart, userId);
   return cart;
 };
 
 // ✅ Clear cart
-export const clearCart = () => {
+export const clearCart = (userId = null) => {
   const emptyCart = { items: [], totalPrice: 0 };
-  saveCart(emptyCart);
+  saveCart(emptyCart, userId);
   return emptyCart;
 };

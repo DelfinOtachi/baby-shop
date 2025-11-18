@@ -1,112 +1,96 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
+import { GoogleLogin } from "@react-oauth/google";
+import axios from "axios";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      const { data } = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        form
-      );
-
-      /**
-       * Backend response could be:
-       * { token: "...", name: "...", email: "...", ... }
-       * Or { user: { name, email }, token }
-       * Adjust according to your backend.
-       */
-      const userData = data.user ? { ...data.user, token: data.token } : data;
-
-      // Save full user info to localStorage
-      localStorage.setItem("userInfo", JSON.stringify(userData));
-
-      // Notify Navbar and other components
-      window.dispatchEvent(new Event("userUpdated"));
-
-      navigate("/"); // redirect to homepage
+      await login(form.email, form.password);
+      navigate("/");
     } catch (err) {
-      console.error("Login failed:", err);
-      setError(err.response?.data?.message || "Login failed. Try again.");
+      setError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogleSuccess = async credentialResponse => {
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/api/auth/google-login",
+        { credential: credentialResponse.credential },
+        { headers: { "Content-Type": "application/json" } }
+      );
+      localStorage.setItem("userInfo", JSON.stringify(res.data));
+      window.dispatchEvent(new Event("userUpdated"));
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      setError("Google login failed. Please try again.");
+    }
+  };
+
+  const handleGoogleError = () => setError("Google login was unsuccessful.");
+
   return (
-    <section className="flex justify-center items-center min-h-screen bg-gradient-to-br from-pink-100 to-blue-100 px-6">
-      <div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center text-pink-500 mb-2">
-          Welcome Back 💕
-        </h2>
-        <p className="text-gray-500 text-center mb-6">
-          Log in to continue shopping
-        </p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
+      <form className="bg-white p-8 rounded-xl shadow-md w-full max-w-md" onSubmit={handleSubmit}>
+        <h2 className="text-2xl font-bold mb-6 text-center text-pink-500">Log In</h2>
+        {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
+        <input
+          type="email"
+          name="email"
+          value={form.email}
+          onChange={handleChange}
+          placeholder="Email"
+          required
+          autoComplete="email"
+          className="w-full mb-4 p-2 border rounded"
+        />
+        <input
+          type="password"
+          name="password"
+          value={form.password}
+          onChange={handleChange}
+          placeholder="Password"
+          required
+          autoComplete="current-password"
+          className="w-full mb-4 p-2 border rounded"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full py-2 rounded text-white ${loading ? "bg-gray-400" : "bg-pink-500 hover:bg-pink-600"}`}
+        >
+          {loading ? "Logging in..." : "Log In"}
+        </button>
 
-        {error && (
-          <div className="bg-red-100 text-red-700 p-2 rounded-md mb-4 text-sm text-center">
-            {error}
-          </div>
-        )}
+        {/* Google Login */}
+        <div className="mt-6 flex justify-center">
+          <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-pink-300 outline-none"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-pink-300 outline-none"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full ${
-              loading ? "bg-gray-400" : "bg-pink-400 hover:bg-pink-500"
-            } text-white py-2 rounded-lg font-semibold transition`}
-          >
-            {loading ? "Logging in..." : "Log In"}
-          </button>
-        </form>
-
-        <p className="text-center text-gray-600 text-sm mt-4">
+        {/* Register link */}
+        <p className="mt-6 text-center text-gray-600">
           Don’t have an account?{" "}
-          <Link to="/register" className="text-blue-500 hover:underline">
-            Sign up
+          <Link to="/register" className="text-pink-500 hover:underline">
+            Register
           </Link>
         </p>
-      </div>
-    </section>
+      </form>
+    </div>
   );
 }

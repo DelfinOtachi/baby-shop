@@ -1,69 +1,76 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { Trash2, Plus, Minus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getCart, removeFromCart, clearCart, addToCart } from "../utils/cartUtils";
+import {
+  getCart,
+  removeFromCart,
+  clearCart,
+  addToCart,
+} from "../utils/cartUtils";
+import { AuthContext } from "../context/AuthContext";
 
 export default function CartPage() {
+  const { user } = useContext(AuthContext);
   const [cart, setCart] = useState({ items: [], totalPrice: 0 });
   const navigate = useNavigate();
 
-  // 🧭 Load cart on mount
+  // 🧭 Load cart when user changes
   useEffect(() => {
-    setCart(getCart());
-  }, []);
+    setCart(getCart(user?.id));
+    const handleCartUpdate = () => setCart(getCart(user?.id));
+    window.addEventListener("cartUpdated", handleCartUpdate);
+    return () => window.removeEventListener("cartUpdated", handleCartUpdate);
+  }, [user]);
 
   const handleRemove = (productId) => {
-    removeFromCart(productId);
-    setCart(getCart());
+    removeFromCart(productId, user?.id);
+    setCart(getCart(user?.id));
   };
 
   const handleClear = () => {
-    clearCart();
+    clearCart(user?.id);
     setCart({ items: [], totalPrice: 0 });
   };
 
-  // 🟢 Increase quantity
   const increaseQty = (product) => {
-    addToCart(product, 1);
-    setCart(getCart());
+    addToCart(product, 1, user?.id);
+    setCart(getCart(user?.id));
   };
 
-  // 🔴 Decrease quantity
   const decreaseQty = (product) => {
-    const currentCart = getCart();
-    const existing = currentCart.items.find(
-      (i) => i.product._id === product._id
-    );
+    const currentCart = getCart(user?.id);
+    const existing = currentCart.items.find((i) => i.product._id === product._id);
 
-    if (existing && existing.quantity > 1) {
-      existing.quantity -= 1;
-      currentCart.totalPrice = currentCart.items.reduce(
+    if (!existing) return;
+
+    if (existing.quantity > 1) {
+      // Create a new array to avoid mutating state directly
+      const updatedItems = currentCart.items.map((i) =>
+        i.product._id === product._id ? { ...i, quantity: i.quantity - 1 } : i
+      );
+      const totalPrice = updatedItems.reduce(
         (sum, i) => sum + i.price * i.quantity,
         0
       );
-      localStorage.setItem("cart", JSON.stringify(currentCart));
+      const updatedCart = { items: updatedItems, totalPrice };
+      localStorage.setItem(
+        user?.id ? `cart_${user.id}` : "cart",
+        JSON.stringify(updatedCart)
+      );
       window.dispatchEvent(new Event("cartUpdated"));
-      setCart(currentCart);
+      setCart(updatedCart);
     } else {
       handleRemove(product._id);
     }
   };
 
- const goToCheckout = () => {
-  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-  const token = userInfo?.token;
-  console.log("🔑 Token before checkout:", token);
-
-  if (!token) {
-    console.log("🚫 No valid token — redirecting to login");
-    navigate("/login", { state: { from: "/checkout" } });
-  } else {
-    console.log("✅ Token found — proceeding to checkout");
-    navigate("/checkout");
-  }
-};
-
-
+  const goToCheckout = () => {
+    if (!user) {
+      navigate("/login", { state: { from: "/checkout" } });
+    } else {
+      navigate("/checkout");
+    }
+  };
 
   return (
     <section className="max-w-5xl mx-auto px-6 py-10">
@@ -87,12 +94,8 @@ export default function CartPage() {
                     className="w-20 h-20 object-cover rounded-lg"
                   />
                   <div>
-                    <h3 className="font-semibold text-gray-800">
-                      {item.product.name}
-                    </h3>
-                    <p className="text-gray-500">
-                      KSh {item.price.toLocaleString()}
-                    </p>
+                    <h3 className="font-semibold text-gray-800">{item.product.name}</h3>
+                    <p className="text-gray-500">KSh {item.price.toLocaleString()}</p>
                   </div>
                 </div>
 
@@ -105,9 +108,7 @@ export default function CartPage() {
                     >
                       <Minus size={18} />
                     </button>
-                    <span className="px-3 font-semibold text-gray-800">
-                      {item.quantity}
-                    </span>
+                    <span className="px-3 font-semibold text-gray-800">{item.quantity}</span>
                     <button
                       onClick={() => increaseQty(item.product)}
                       className="p-1 text-gray-700 hover:text-pink-600"
@@ -132,11 +133,11 @@ export default function CartPage() {
           </div>
 
           {/* Cart Summary */}
-          <div className="flex justify-between items-center bg-white shadow p-6 rounded-lg">
+          <div className="flex flex-col md:flex-row justify-between items-center bg-white shadow p-6 rounded-lg space-y-4 md:space-y-0">
             <h2 className="text-xl font-bold text-gray-800">
               Total: <span className="text-pink-600">KSh {cart.totalPrice.toLocaleString()}</span>
             </h2>
-            <div className="space-x-4">
+            <div className="flex space-x-4">
               <button
                 onClick={handleClear}
                 className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition"
@@ -145,7 +146,7 @@ export default function CartPage() {
               </button>
               <button
                 onClick={goToCheckout}
-                className="bg-babyBlue hover:bg-pink-600 text-white px-6 py-2 rounded-lg transition"
+                className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded-lg transition"
               >
                 Proceed to Checkout
               </button>

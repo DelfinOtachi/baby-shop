@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
 export default function FeaturedCategories() {
   const [subs, setSubs] = useState([]);
@@ -10,7 +11,9 @@ export default function FeaturedCategories() {
   useEffect(() => {
     const fetchSubs = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5000/api/subcategories/featured");
+        const { data } = await axios.get(
+          "http://localhost:5000/api/subcategories/featured"
+        );
         setSubs(data);
       } catch (err) {
         console.error("Failed to fetch featured subcategories:", err);
@@ -33,10 +36,12 @@ export default function FeaturedCategories() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {subs.map((sub) => (
-            <div
+            <motion.div
               key={sub._id}
               onClick={() => navigate(`/subcategory/${sub.slug}`)}
-              className="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-md transition p-4 flex flex-col items-center text-center"
+              className="cursor-pointer bg-white rounded-2xl shadow-sm p-4 flex flex-col items-center text-center"
+              whileHover={{ scale: 1.05, y: -4, boxShadow: "0px 10px 30px rgba(0,0,0,0.15)" }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
             >
               <div className="w-24 h-24 mb-3 overflow-hidden rounded-full border border-gray-200">
                 <img
@@ -48,7 +53,7 @@ export default function FeaturedCategories() {
               <h3 className="font-semibold text-gray-700 text-sm md:text-base">
                 {sub.name}
               </h3>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
